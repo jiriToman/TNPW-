@@ -1,104 +1,139 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const port = 3000;
-const hbs = require('hbs');
-const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/tnpw', {useNewUrlParser: true});
+const port = 8000;
+const hbs = require("hbs");
+//mongoose init
+const mongoose = require("mongoose");
+mongoose.connect("mongodb://localhost/tnpw", { useNewUrlParser: true });
 const db = mongoose.connection;
-const User = require('./userSchema.js');
-const bodyParser = require('body-parser');
-var session = require('express-session');
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-console.log('we are connected!');
+//naimportovani mongoose schematu
+const User = require("./userSchema.js");
+//body parser pro nacitani z dokumentu
+const bodyParser = require("body-parser");
+//express session pro uchovavani user/session id bezpecne v cookies
+var session = require("express-session");
+const jwt = require("jsonwebtoken");
+//check jestli jsem pripojeny k db
+db.on("error", console.error.bind(console, "connection error:"));
+db.once("open", function () {
+  console.log("we are connected!");
 });
-
+//body parser init pro obe moznosti
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(session({
-  secret: 'tnpw2',
-  resave: true,
-  saveUninitialized: false
-}));
+//express session init
+app.use(
+  session({
+    secret: "tnpw2",
+    resave: true,
+    saveUninitialized: false,
+  })
+);
 
-app.use(express.static('resources'))
-app.set('view engine', 'hbs');
-hbs.registerPartials(__dirname + '/views/partials', function (err) {});
+const auth = async (req, res, next) => {
+  try {
+    const token = req.header("Authorization").replace("Bearer ", "");
+    const decoded = jwt.verify(token, "tnpw2");
+    const user = await User.findOne({
+      _id: decoded._id,
+      "tokens.token": token,
+    });
+    if (!user) {
+      throw new Error("no user found");
+    }
+    req.token = token;
+    req.user = user;
+    next();
+  } catch (e) {
+    res.status(401).send({ error: "Verify your identity" });
+  }
+};
 
+//hbs init a priprava frontendovych komponent
+app.use(express.static("resources"));
+app.set("view engine", "hbs");
+hbs.registerPartials(__dirname + "/views/partials", function (err) {});
+//obsluha postu na dane adrese
 
-
-app.post('/', (req, res,next) => {
-  console.log('email: ' + req.body.email + ' password: '+
-   req.body.password);
+app.post("/", (req, res, next) => {
+  console.log("email: " + req.body.email + " password: " + req.body.password);
   if (req.body.password !== req.body.passwordII) {
-    var err = new Error('Please enter the same password twice.');
-    err.status = 400;
+    //check jestli se hesla shoduji a odeslani erroru https://expressjs.com/en/guide/error-handling.html
+    var err = "Please enter the same password twice.";
     res.send(err);
-  }else if (req.body.email && req.body.password && req.body.passwordConf) {  
-      var userData = {
+  } else if (req.body.email && req.body.password && req.body.passwordII) {
+    // pokud jsou vsechna potrebna data ulozim je do UserData a poslu do mongo a vytvarim noveho usera
+    var userData = {
       email: req.body.email,
       password: req.body.password,
-      passwordII: req.body.passwordII,
-     
-      }  
+    };
 
-      User.create(userData, function (err, user) {
-        if (err.code==11000) {
-          res.send('uzivatel existuje')}
-          else if (err.code !=null || err.code!=11000){
-          return next(console.log(err));
-        } else {
-          return res.redirect('/profile');
-        }
-  });
-}
-  
-
-
-  })
-  app.post('/login', urlencodedParser, function (req, res) {
-    // res.send('welcome, ' + req.body.username);
-    
-
-    if (req.body.email && req.body.password) {
-      User.authenticate(req.body.email, req.body.password, function (error, user); 
-    }else if (req.body.logemail && req.body.logpassword) {
-      User.authenticate(req.body.logemail, req.body.logpassword, function (error, user) {
-        if (error || !user) {
-          var err = new Error('Wrong email or password.');
-          err.status = 401;
-          return next(err);      
-        } else {
-            req.session.userId = user._id;
-            return res.redirect('/profile');
-          }
-        });
-      } else { 
-        var err = new Error('All fields required.');
-      err.status = 400;
-      return next(err);
-    }
-  })
-
-
-  })
-
-
-app.get('/', (req, res) => {
-   
-    
-    res.render('index');
-    
-  
+    User.create(userData, async function (err, user) {
+      if (err) {
+        return next(err);
+      } else {
+        //pokud vse probehne ok ulozim user is do sessiony a otevru user profil
+        req.session.userId = user._id;
+        const token = await user.generateAuthToken();
+        return res.redirect("/profile");
+      }
     });
-  
-    app.get('/profile', (req, res) => {
-   
-    
-        res.send('haha');
-          
-      
-        });
+  }
+});
+app.post("/login", function (req, res, next) {
+  //pokud je pritomny email a heslo provedu autentizaci
+  if (req.body.email && req.body.password) {
+    User.authenticate(req.body.email, req.body.password, async function (
+      error,
+      user
+    ) {
+      if (error) {
+        var err = "You entered incorrect login information: " + error;
+        return next(err);
+      } else if (!user) {
+        var err = "Unable to find user";
+        return next(err);
+      } else {
+        //pokud je vse ok otevru user profil
+        req.session.userId = user._id;
+        const token = await user.generateAuthToken();
+        return res.redirect("/profile");
+      }
+    });
+  } else {
+    var err = "Something is missing.";
+    return next(err);
+  }
+});
 
+app.get("/", (req, res) => {
+  //
+  res.render("index");
+});
+app.get("/login", (req, res) => {
+  //
+  res.render("login");
+});
+
+app.get("/profile", auth, (req, res) => {
+  //najdu user id pokud neni pritomne nebo je nespravne vyhodi error
+  // console.log(req.session.userId);
+  // User.findById(req.session.userId).exec(function (error, user) {
+  //   console.log(JSON.stringify(user));
+  //   if (error) {
+  //     return next(error);
+  //   } else {
+  //     console.log(JSON.stringify(user));
+  //     return res.send("name: " + user.name + " email: " + user.email);
+  //   }
+  // });
+  res.send(" email: " + user.email);
+});
+app.get("/cls", async (req, res) => {
+  await User.deleteMany({});
+  return res.send("cleared");
+});
 app.listen(port, () => console.log(`App listening to port ${port}`));
-// https://medium.com/createdd-notes/starting-with-authentication-a-tutorial-with-node-js-and-mongodb-25d524ca0359
+
+// cmd  pro export dbs cd C:\Program Files\MongoDB\Server\4.2\bin
+//  mongoexport --collection=users --db=tnpw --out=C:\Users\toman\Desktop\TNPW_Project\users.json
