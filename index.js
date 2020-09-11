@@ -30,24 +30,24 @@ app.use(
   })
 );
 
-const auth = async (req, res, next) => {
-  try {
-    const token = req.header("Authorization").replace("Bearer ", "");
-    const decoded = jwt.verify(token, "tnpw2");
-    const user = await User.findOne({
-      _id: decoded._id,
-      "tokens.token": token,
-    });
-    if (!user) {
-      throw new Error("no user found");
-    }
-    req.token = token;
-    req.user = user;
-    next();
-  } catch (e) {
-    res.status(401).send({ error: "Verify your identity" });
-  }
-};
+// const auth = async (req, res, next) => {
+//   try {
+//     const token = req.header("Authorization").replace("Bearer ", "");
+//     const decoded = jwt.verify(token, "tnpw2");
+//     const user = await User.findOne({
+//       _id: decoded._id,
+//       "tokens.token": token,
+//     });
+//     if (!user) {
+//       throw new Error("no user found");
+//     }
+//     req.token = token;
+//     req.user = user;
+//     next();
+//   } catch (e) {
+//     res.status(401).send({ error: "Verify your identity" });
+//   }
+// };
 
 //hbs init a priprava frontendovych komponent
 app.use(express.static("resources"));
@@ -74,7 +74,7 @@ app.post("/", (req, res, next) => {
       } else {
         //pokud vse probehne ok ulozim user is do sessiony a otevru user profil
         req.session.userId = user._id;
-        const token = await user.generateAuthToken();
+        // const token = await user.generateAuthToken();
         return res.redirect("/profile");
       }
     });
@@ -96,7 +96,7 @@ app.post("/login", function (req, res, next) {
       } else {
         //pokud je vse ok otevru user profil
         req.session.userId = user._id;
-        const token = await user.generateAuthToken();
+        // const token = await user.generateAuthToken();
         return res.redirect("/profile");
       }
     });
@@ -115,19 +115,19 @@ app.get("/login", (req, res) => {
   res.render("login");
 });
 
-app.get("/profile", auth, (req, res) => {
-  //najdu user id pokud neni pritomne nebo je nespravne vyhodi error
-  // console.log(req.session.userId);
-  // User.findById(req.session.userId).exec(function (error, user) {
-  //   console.log(JSON.stringify(user));
-  //   if (error) {
-  //     return next(error);
-  //   } else {
-  //     console.log(JSON.stringify(user));
-  //     return res.send("name: " + user.name + " email: " + user.email);
-  //   }
-  // });
-  res.send(" email: " + user.email);
+app.get("/profile", (req, res) => {
+  // najdu user id pokud neni pritomne nebo je nespravne vyhodi error
+  console.log(req.session.userId);
+  User.findById(req.session.userId).exec(function (error, user) {
+    console.log(JSON.stringify(user));
+    if (error) {
+      return next(error);
+    } else {
+      console.log(JSON.stringify(user));
+      return res.send("name: " + user.name + " email: " + user.email);
+    }
+  });
+  // res.send(" email: " + user.email);
 });
 app.get("/cls", async (req, res) => {
   await User.deleteMany({});

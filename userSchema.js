@@ -23,13 +23,13 @@ var UserS = new mongoose.Schema({
   ],
 });
 //vytvori token
-UserS.methods.generateAuthToken = async function () {
-  var user = this;
-  const token = jwt.sign({ _id: user._id.toString() }, "tnpw2");
-  user.tokens = user.tokens.concat({ token });
-  await user.save();
-  return token;
-};
+// UserS.methods.generateAuthToken = async function () {
+//   var user = this;
+//   const token = jwt.sign({ _id: user._id.toString() }, "tnpw2");
+//   user.tokens = user.tokens.concat({ token });
+//   await user.save();
+//   return token;
+// };
 //deklkarace tatcike autentikacni fce pro mongoose https://mongoosejs.com/docs/guide.html#statics
 UserS.statics.authenticate = function (email, password, callback) {
   //hleda usera s danymi param v db https://mongoosejs.com/docs/api.html#model_Model.findOne
