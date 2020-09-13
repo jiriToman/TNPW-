@@ -7,8 +7,23 @@
 </head>
 <body>
     {{> header}}
-    <h1>Account</h1>
-          {{!-- {{user.name}}{{}} --}}
+    <h1>{{user.email}} account</h1>
+          <a href="/phrases"></a>
+                <form class="d-flex" method="post">
+        <input id="enp" name="enp"class="form-control mr-2" type="text" placeholder="English phrase" aria-label="English phrase">
+       
+         <input id="csp" name="csp"class="form-control mr-2" type="text" placeholder="Czech phrase" aria-label="Czech phrase">
+        <input id="dep" name="dep"class="form-control mr-2" type="text" placeholder="German phrase" aria-label="German phrase">
+        <button class="btn btn-outline-success" type="submit">Add/Update</button>
+        <p>pridava anebo updatuje podle anglicke fraze</p>
+      </form>
+      <div class="spacer"></div>
+      {{>list}}
+       <form class="d-flex" method="post">
+        <input id="englishp" name="englishp"class="form-control mr-2" type="text" placeholder="English phrase" aria-label="English phrase">
+        <button class="btn btn-outline-success" type="submit">Remove</button>
+        <p>odstranuje podle anglicke fraze</p>
+      </form>
     {{> footer}}
 </body>
 </html>

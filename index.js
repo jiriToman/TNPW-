@@ -107,28 +107,143 @@ app.post("/login", function (req, res, next) {
 });
 
 app.get("/", (req, res) => {
-  //
   res.render("index");
 });
 app.get("/login", (req, res) => {
-  //
   res.render("login");
 });
 
-app.get("/profile", (req, res) => {
+app.get("/profile", (req, res, next) => {
   // najdu user id pokud neni pritomne nebo je nespravne vyhodi error
-  console.log(req.session.userId);
-  User.findById(req.session.userId).exec(function (error, user) {
-    console.log(JSON.stringify(user));
-    if (error) {
-      return next(error);
-    } else {
-      console.log(JSON.stringify(user));
-      return res.send("name: " + user.name + " email: " + user.email);
-    }
-  });
-  // res.send(" email: " + user.email);
+  // console.log(req.session.userId);
+  if (!req.session.userId) {
+    return res.render("error", { error: " nejste prihlaseny " });
+  } else {
+    User.findById(req.session.userId).exec(function (error, user) {
+      // console.log(JSON.stringify(user));
+      if (error) {
+        return next(error);
+      } else {
+        // console.log(JSON.stringify(user));
+        return res.render("home", { user: user });
+      }
+    });
+  }
 });
+//pridavani novych frazi(pokud fraze existuje  update stavajici podle hodnoty v en)
+app.post("/profile", (req, res, next) => {
+  console.log(req.body.englishp);
+  var phraseData,
+    remove = req.body.englishp;
+  if (!req.body.enp && !req.body.englishp) {
+    var err = "Please enter an english phrase";
+    res.send(err);
+  } else if (
+    (req.body.enp && req.body.csp) ||
+    (req.body.enp && req.body.dep) ||
+    remove
+  ) {
+    if (req.body.enp && req.body.csp && req.body.dep) {
+      var phraseData = {
+        germanP: req.body.dep,
+        englishP: req.body.enp,
+        czechP: req.body.csp,
+      };
+    } else if (req.body.enp && req.body.csp && !req.body.dep) {
+      var phraseData = {
+        englishP: req.body.enp,
+        czechP: req.body.csp,
+      };
+    } else if (req.body.enp && req.body.dep && !req.body.csp) {
+      var phraseData = {
+        englishP: req.body.enp,
+        germanP: req.body.dep,
+      };
+    }
+    User.findById({ _id: req.session.userId }, function (err, user) {
+      let found = false,
+        end = false ;
+      if (err) {
+        return res.send(err);
+      } else if (!user) {
+        return res.send("uzivatel nenalezen");
+      } else {
+        // console.log(JSON.stringify(user.phrases));
+        for (var i = 0; i < user.phrases.length; i++) {
+          //update fraze
+          if (phraseData) {
+            if (user.phrases[i].englishP === phraseData.englishP) {
+              console.log("rovna se fraze");
+              if (phraseData.czechP) {
+                user.phrases[i].czechP = phraseData.czechP;
+              }
+              if (phraseData.germanP) {
+                user.phrases[i].germanP = phraseData.germanP;
+              }
+              found = true;
+            }
+          } else if (remove === user.phrases[i].englishP) {
+            console.log("removing "+JSON.stringify(user));
+            found = true;
+            let target = user.phrases[i]._id;
+            user.phrases.pull(target);
+
+            User.findOneAndUpdate(
+                { _id: user._id },
+                {$pull: { "phrases": {_id: target}}},
+
+                { safe: true, upsert: true }
+              )
+                .then(() => {
+                  req.session.userId = user._id;
+                  return res.redirect("back");
+                  console.log('removed');
+                })
+                .catch((error) => {
+                  return res.render('error',{error: "Database Error"});
+                });
+          }else{
+            console.log(user.phrases[i]);
+            // return res.render('error',{error: "expression "+remove+" not found"});
+          }
+          if (i == user.phrases.length - 1) {
+            end = true;
+          }
+        }
+
+        if ((end == true && found == false) || user.phrases.length == 0) {
+          console.log("melo by se pridat delka " + user.phrases.length);
+          user.phrases.push(phraseData);
+          found = true;
+        } else if (found == false) {
+          console.log("neprobehlo pridani");
+        }
+        user.save();
+        res.redirect("back");
+      }
+    });
+
+    // User.findOneAndUpdate(
+    //   { _id: req.session.userId },
+    //   {
+    //     $push: { phrases: phraseData },
+    //   },
+    //   { new: true, safe: true, upsert: true }
+    // )
+    //   .then(() => {
+    //     req.session.userId = user._id;
+    //     return res.redirect("/profile");
+    //   })
+    //   .catch((error) => {
+    //     return res.status(500).json({
+    //       status: "Failed",
+    //       message: "Database Error",
+    //       data: error,
+    //     });
+    //   });
+  }
+});
+
 app.get("/cls", async (req, res) => {
   await User.deleteMany({});
   return res.send("cleared");

@@ -2,6 +2,23 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 //vytvoreni user schema pro mongoose https://mongoosejs.com/docs/
+var PhraseSchema = new mongoose.Schema({
+  germanP: {
+    type: String,
+    trim: true,
+    unique: true,
+  },
+  czechP: {
+    type: String,
+    trim: true,
+    unique: true,
+  },
+  englishP: {
+    type: String,
+    unique: true,
+    required: true,
+  },
+});
 var UserS = new mongoose.Schema({
   email: {
     type: String,
@@ -13,6 +30,11 @@ var UserS = new mongoose.Schema({
     type: String,
     required: true,
   },
+  hashed: {
+    type: Boolean,
+    default: false,
+    required: true,
+  },
   tokens: [
     {
       token: {
@@ -21,6 +43,7 @@ var UserS = new mongoose.Schema({
       },
     },
   ],
+  phrases: [PhraseSchema],
 });
 //vytvori token
 // UserS.methods.generateAuthToken = async function () {
@@ -54,9 +77,9 @@ UserS.statics.authenticate = function (email, password, callback) {
       if (result === true) {
         return callback(null, user);
       } else {
-        var err = "passord is incorrect";
+        var error = "password is incorrect";
 
-        return callback(err);
+        return callback(error + " - " + err);
       }
     });
   });
@@ -65,14 +88,53 @@ UserS.statics.authenticate = function (email, password, callback) {
 UserS.pre("save", function (next) {
   var user = this;
   console.log("heslo pred hashem: " + user.password);
-  bcrypt.hash(user.password, 10, function (err, hash) {
-    if (err) {
-      return next(err);
+  if (user.hashed == false) {
+      bcrypt.hash(user.password, 10, function (err, hash) {
+        if (err) {
+          return next(err);
+        }
+      
+        user.password = hash;
+        user.hashed = true;
+        console.log('hash probehl');
+        next();
+      });
+    }else{
+      next();
     }
-    user.password = hash;
-    next();
-  });
+    
 });
+
+// UserS.statics.addPhrase = function (id, phraseObject, callback) {
+//   //hleda usera s danymi param v db https://mongoosejs.com/docs/api.html#model_Model.findOne
+//   User.findById(id).exec(function (err, user) {
+//     if (err) {
+//       return callback(err);
+//     } else if (!user) {
+//       var err = "User does not exist.";
+//       err.status = 401;
+//       return callback(err);
+//     } else {
+//       user.phrases.push(phraseObject);
+//       // User.update({ _id: user._id }, { $push: { phrases: phraseObject } });
+//     }
+//   });
+// };
+// User.findOneAndUpdate({"_id":req.body.id},{
+//   "$push": {"phrases": req.body.resources}
+// },{new: true, safe: true, upsert: true }).then((result) => {
+//   return res.status(201).json({
+//       status: "Success",
+//       message: "Resources Are Created Successfully",
+//       data: result
+//   });
+// }).catch((error) => {
+//   return res.status(500).json({
+//       status: "Failed",
+//       message: "Database Error",
+//       data: error
+//   });
+// });
 
 var User = mongoose.model("User", UserS);
 
