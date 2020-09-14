@@ -30,9 +30,14 @@ app.use(
   })
 );
 
+
+// tady mam auth failuje na .replace tvrdi ze header neexistuje
 // const auth = async (req, res, next) => {
+//   console.log('token: ' +JSON.stringify(req.header("Authorization").replace("Bearer ", "")));
+//   console.log('decoded: ' +JSON.stringify(jwt.verify(token, "tnpw2")));
 //   try {
 //     const token = req.header("Authorization").replace("Bearer ", "");
+  
 //     const decoded = jwt.verify(token, "tnpw2");
 //     const user = await User.findOne({
 //       _id: decoded._id,
@@ -45,9 +50,10 @@ app.use(
 //     req.user = user;
 //     next();
 //   } catch (e) {
-//     res.status(401).send({ error: "Verify your identity" });
+//     res.status(401).send({ error: "Verify your identity: "+ e });
 //   }
 // };
+
 
 //hbs init a priprava frontendovych komponent
 app.use(express.static("resources"));
@@ -74,7 +80,7 @@ app.post("/", (req, res, next) => {
       } else {
         //pokud vse probehne ok ulozim user is do sessiony a otevru user profil
         req.session.userId = user._id;
-        // const token = await user.generateAuthToken();
+        const token = await user.generateAuthToken();
         return res.redirect("/profile");
       }
     });
@@ -96,8 +102,8 @@ app.post("/login", function (req, res, next) {
       } else {
         //pokud je vse ok otevru user profil
         req.session.userId = user._id;
-        // const token = await user.generateAuthToken();
-        return res.redirect("/profile");
+         const token = await user.generateAuthToken();
+         return res.redirect("/profile");
       }
     });
   } else {
@@ -113,7 +119,8 @@ app.get("/login", (req, res) => {
   res.render("login");
 });
 
-app.get("/profile", (req, res, next) => {
+app.get("/profile",  (req, res, next) => {
+  //sem bych umistil auth, za profile",
   // najdu user id pokud neni pritomne nebo je nespravne vyhodi error
   // console.log(req.session.userId);
   if (!req.session.userId) {
@@ -188,23 +195,9 @@ app.post("/profile", (req, res, next) => {
             let target = user.phrases[i]._id;
             user.phrases.pull(target);
 
-            User.findOneAndUpdate(
-                { _id: user._id },
-                {$pull: { "phrases": {_id: target}}},
-
-                { safe: true, upsert: true }
-              )
-                .then(() => {
-                  req.session.userId = user._id;
-                  return res.redirect("back");
-                  console.log('removed');
-                })
-                .catch((error) => {
-                  return res.render('error',{error: "Database Error"});
-                });
           }else{
             console.log(user.phrases[i]);
-            // return res.render('error',{error: "expression "+remove+" not found"});
+            
           }
           if (i == user.phrases.length - 1) {
             end = true;
@@ -222,25 +215,6 @@ app.post("/profile", (req, res, next) => {
         res.redirect("back");
       }
     });
-
-    // User.findOneAndUpdate(
-    //   { _id: req.session.userId },
-    //   {
-    //     $push: { phrases: phraseData },
-    //   },
-    //   { new: true, safe: true, upsert: true }
-    // )
-    //   .then(() => {
-    //     req.session.userId = user._id;
-    //     return res.redirect("/profile");
-    //   })
-    //   .catch((error) => {
-    //     return res.status(500).json({
-    //       status: "Failed",
-    //       message: "Database Error",
-    //       data: error,
-    //     });
-    //   });
   }
 });
 

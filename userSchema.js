@@ -46,13 +46,13 @@ var UserS = new mongoose.Schema({
   phrases: [PhraseSchema],
 });
 //vytvori token
-// UserS.methods.generateAuthToken = async function () {
-//   var user = this;
-//   const token = jwt.sign({ _id: user._id.toString() }, "tnpw2");
-//   user.tokens = user.tokens.concat({ token });
-//   await user.save();
-//   return token;
-// };
+UserS.methods.generateAuthToken = async function () {
+  var user = this;
+  const token = jwt.sign({ _id: user._id.toString() }, "tnpw2");
+  user.tokens = user.tokens.concat({ token });
+  await user.save();
+  return token;
+};
 //deklkarace tatcike autentikacni fce pro mongoose https://mongoosejs.com/docs/guide.html#statics
 UserS.statics.authenticate = function (email, password, callback) {
   //hleda usera s danymi param v db https://mongoosejs.com/docs/api.html#model_Model.findOne
@@ -104,37 +104,6 @@ UserS.pre("save", function (next) {
     }
     
 });
-
-// UserS.statics.addPhrase = function (id, phraseObject, callback) {
-//   //hleda usera s danymi param v db https://mongoosejs.com/docs/api.html#model_Model.findOne
-//   User.findById(id).exec(function (err, user) {
-//     if (err) {
-//       return callback(err);
-//     } else if (!user) {
-//       var err = "User does not exist.";
-//       err.status = 401;
-//       return callback(err);
-//     } else {
-//       user.phrases.push(phraseObject);
-//       // User.update({ _id: user._id }, { $push: { phrases: phraseObject } });
-//     }
-//   });
-// };
-// User.findOneAndUpdate({"_id":req.body.id},{
-//   "$push": {"phrases": req.body.resources}
-// },{new: true, safe: true, upsert: true }).then((result) => {
-//   return res.status(201).json({
-//       status: "Success",
-//       message: "Resources Are Created Successfully",
-//       data: result
-//   });
-// }).catch((error) => {
-//   return res.status(500).json({
-//       status: "Failed",
-//       message: "Database Error",
-//       data: error
-//   });
-// });
 
 var User = mongoose.model("User", UserS);
 
