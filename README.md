@@ -1,4 +1,4 @@
-# Skolni projekt TNPW2
+# Školní projekt TNPW2
 Cílem projektu bylo vytvořit REST API s CRUD operacemi v MongoDB.
 
 Téma funkcionality je List frází pro učení více jazyků najednou.
