@@ -13,7 +13,7 @@ Jako Databáze je použita MongoDB a je spravována pomocí Mongoose.
 
 ## DBS
 
-Je  rootu projektu.
+Je  rootu projektu. Soubory userSchema a users.json
 
 ### GUI
 Přidal jsem jednoduché form based GUI ostylované základním bootstrapem.
